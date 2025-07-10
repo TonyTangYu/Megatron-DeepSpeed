@@ -28,6 +28,15 @@ import subprocess
 from torch import nn
 import torch.nn.functional as F
 
+world_size = os.environ['SLURM_NTASKS']
+node_id = os.environ['SLURM_NODEID']
+rank = os.environ['SLURM_PROCID']
+local_rank = int(os.environ['SLURM_LOCALID'])
+
+os.environ['RANK'] = os.environ['SLURM_PROCID']
+os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
+os.environ['MASTER_PORT'] = os.environ['MASTER_PORT']
+os.environ['LOCAL_RANK'] = os.environ['SLURM_LOCALID']
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -36,6 +45,7 @@ def model_provider(pre_process=True, post_process=True):
     see_memory_usage(f"Before Building Model", force=True)
 
     args = get_args()
+    args.local_rank = local_rank
     config = core_transformer_config_from_args(args)
     if hasattr(mpu, 'get_sequence_data_parallel_group'):
         dpg = mpu.get_sequence_data_parallel_group()
