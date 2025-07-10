@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=gpt
-#SBATCH --output=multi_gpt.out
+#SBATCH --job-name=gpt_layer
+#SBATCH --output=gpt_4_3090_layer.out
 #SBATCH -p ai
-#SBATCH --nodes=2
-#SBATCH -w gn[33-34]
+#SBATCH --nodes=4
+#SBATCH -w gn[33-34,36,38]
 #SBATCH --ntasks-per-node=4
 #SBATCH --account=zlz
 #SBATCH --mem=MaxMemPerNode
@@ -161,4 +161,5 @@ deepspeed \
        --eval-iters 10 \
        --bf16 \
        --no-masked-softmax-fusion \
+       --pipeline-partition-method uniform \
        $ds_args

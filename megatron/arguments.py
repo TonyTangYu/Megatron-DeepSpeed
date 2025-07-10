@@ -1210,6 +1210,8 @@ def _add_distributed_args(parser):
                        'affects the encoder embedding.)')
     group.add_argument('--use-distributed-optimizer', action='store_true',
                        help='Use distributed optimizer.')
+    group.add_argument('--pipeline-partition-method', default='layer',
+                       help='Pipeline partition method.')
 
     return parser
 
