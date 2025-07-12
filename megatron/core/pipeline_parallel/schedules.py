@@ -114,6 +114,8 @@ def deallocate_output_tensor(out, deallocate_pipeline_outputs=False):
     '''
     if (out is None) or (not deallocate_pipeline_outputs):
         return
+    if isinstance(out, tuple):
+        out = out[0]
     assert isinstance(out, torch.Tensor), \
         "expected Tensor, found %s." % type(out).__name__
     assert out._base is None, \
@@ -133,6 +135,8 @@ def custom_backward(output, grad_output):
     grad have the same shape, while C++'s 'backward' does not.
     '''
 
+    if isinstance(output, tuple):
+        output = output[0]
     assert output.numel() == 1, \
         "output should be pseudo-'freed' in schedule, to optimize memory"
     assert isinstance(output, torch.Tensor), \

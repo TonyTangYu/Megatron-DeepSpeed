@@ -551,6 +551,7 @@ class TransformerLanguageModel(MegatronModule):
                     rotary_pos_emb = (rotary_pos_emb_cos.to(encoder_input.dtype), rotary_pos_emb_sin.to(encoder_input.dtype))
 
         # Run encoder.
+        encoder_moe_losses = None
         if enc_hidden_states is None:
             if self.encoder is not None:
                 encoder_output, *encoder_moe_losses = self.encoder(

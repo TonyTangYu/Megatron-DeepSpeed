@@ -18,7 +18,8 @@ from megatron.model import T5Model
 from megatron.training import pretrain
 from megatron.utils import average_losses_across_data_parallel_group
 from megatron.arguments import core_transformer_config_from_args
-
+import os
+import subprocess
 
 """
 Pipeline parallelism for T5
@@ -55,13 +56,24 @@ to accumulate the encoder_hidden_state gradient across skip connections
 (encoder_hidden_state fed in as input to each layer in the decoder).
 """
 
+world_size = os.environ['SLURM_NTASKS']
+node_id = os.environ['SLURM_NODEID']
+rank = os.environ['SLURM_PROCID']
+local_rank = int(os.environ['SLURM_LOCALID'])
+
+os.environ['RANK'] = os.environ['SLURM_PROCID']
+os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
+os.environ['MASTER_PORT'] = os.environ['MASTER_PORT']
+os.environ['LOCAL_RANK'] = os.environ['SLURM_LOCALID']
 
 def model_provider(pre_process=True, post_process=True,
                    add_encoder=True, add_decoder=True):
     """Build the model."""
 
     print_rank_0('building T5 model ...')
-    config = core_transformer_config_from_args(get_args())
+    args = get_args()
+    args.local_rank = local_rank
+    config = core_transformer_config_from_args(args)
     model = T5Model(config=config,
                     num_tokentypes=0,
                     parallel_output=True,
@@ -101,6 +113,8 @@ def get_batch(data_iterator):
 
 
 def loss_func(loss_mask, output_tensor):
+    if isinstance(output_tensor, tuple):
+        output_tensor = output_tensor[0]
     lm_loss_ = output_tensor.float()
     lm_loss = torch.sum(
         lm_loss_.view(-1) * loss_mask.reshape(-1)) / loss_mask.sum()
