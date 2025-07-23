@@ -2,8 +2,8 @@
 #SBATCH --job-name=gpt_layer
 #SBATCH --output=gpt_4_3090_layer.out
 #SBATCH -p ai
-#SBATCH --nodes=4
-#SBATCH -w gn[33-34,36,38]
+#SBATCH --nodes=2
+#SBATCH -w gn[11-12]
 #SBATCH --ntasks-per-node=4
 #SBATCH --account=zlz
 #SBATCH --mem=MaxMemPerNode
@@ -130,7 +130,6 @@ deepspeed \
        --no_ssh_check \
        --launcher SLURM \
        ../pretrain_gpt.py \
-       --tensor-model-parallel-size $TP \
        --pipeline-model-parallel-size $PP \
        --num-layers $NUM_LAYERS \
        --hidden-size $HIDDEN_SIZE \
@@ -159,7 +158,6 @@ deepspeed \
        --save-interval 10000 \
        --eval-interval 1000 \
        --eval-iters 10 \
-       --bf16 \
        --no-masked-softmax-fusion \
        --pipeline-partition-method uniform \
        $ds_args

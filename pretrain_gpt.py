@@ -38,12 +38,81 @@ os.environ['WORLD_SIZE'] = os.environ['SLURM_NTASKS']
 os.environ['MASTER_PORT'] = os.environ['MASTER_PORT']
 os.environ['LOCAL_RANK'] = os.environ['SLURM_LOCALID']
 
+from fvcore.nn import FlopCountAnalysis, flop_count_table
+
+def get_gpt_layer_flops(model, input_data):
+    """
+    Args:
+        model: GPT模型实例
+        input_shape: 输入张量形状 (batch_size, seq_len)
+    Returns:
+        layer_flops: 各层FLOPs字典
+        total_flops: 总FLOPs
+    """
+    model.eval()
+    device = next(model.parameters()).device
+    for param in model.parameters():
+        if not param.is_cuda:
+            param.data = param.data.to(device)
+    datas = (input_data[0][0].to(device), input_data[0][1].to(device), input_data[0][2].to(device))
+    flops_counter = FlopCountAnalysis(model, datas)
+    
+    layer_flops = {}
+    for module_name, module in model.named_modules():
+        if module_name:  
+            try:
+                module_flops = flops_counter.by_module()[module_name]
+                layer_flops[module_name] = module_flops
+            except KeyError:
+                continue
+    
+    print(flop_count_table(flops_counter))
+    
+    for name, flops in layer_flops.items():
+        print(f"{name:<50} {flops/1e6:>10.2f} MFLOPs")
+    
+    total_flops = flops_counter.total()
+    print(f"\nTotal FLOPs: {total_flops:,} (≈{total_flops/1e9:.2f} GFLOPs)")
+    
+    return layer_flops, total_flops
+
+def get_dummy_data():
+    dummy_inputs = None
+    from megatron.training import build_train_valid_test_data_iterators
+    train_data_iterator, _, _ \
+            = build_train_valid_test_data_iterators(
+                train_valid_test_datasets_provider)
+    dummy_inputs = get_batch_pipe(next(train_data_iterator))
+    
+    return dummy_inputs
+
+def model_profile(pre_process=True, post_process=True):
+    """Build the model."""
+    args = get_args()
+    args.local_rank = local_rank
+    config = core_transformer_config_from_args(args)
+    model = GPTModel(
+        config=config,
+        num_tokentypes=0,
+        parallel_output=True,
+        pre_process=pre_process,
+        post_process=post_process
+    )
+    args.iteration = 0
+    dummy_inputs = get_dummy_data()
+    layer_flops, total_flops = get_gpt_layer_flops(model, dummy_inputs)
+    del model 
+    del dummy_inputs
+    return layer_flops, total_flops
+
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
 
     print_rank_0('building GPT model ...')
     see_memory_usage(f"Before Building Model", force=True)
 
+    layer_flops, total_flops = model_profile()
+    
     args = get_args()
     args.local_rank = local_rank
     config = core_transformer_config_from_args(args)
