@@ -12,7 +12,7 @@
 # This example script is contributed by external user https://github.com/LydiaXiaohongLi
 set -ex
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-
+export PYTHONPATH=/gf3/home/zlz/ty/lapp:$PYTHONPATH
 #####################################
 # Change the below configurations here
 DS_CONFIG=deepspeed.json
